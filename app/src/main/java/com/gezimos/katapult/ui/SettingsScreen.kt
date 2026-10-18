@@ -126,6 +126,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     var showBattery by remember { mutableStateOf(prefs.showBattery) }
     var showAlarm by remember { mutableStateOf(prefs.showAlarm) }
     var showWeather by remember { mutableStateOf(prefs.showWeather) }
+    var showNetworkInfo by remember { mutableStateOf(prefs.showNetworkInfo) }
     var roundedIcons by remember { mutableStateOf(prefs.roundedIcons) }
     var iconSize by remember { mutableIntStateOf(prefs.iconSize) }
     var themeMode by remember { mutableIntStateOf(prefs.themeMode) }
@@ -501,6 +502,18 @@ fun SettingsScreen(viewModel: MainViewModel) {
                         },
                     )
                 }
+            }
+            add {
+                SettingsToggleRow(
+                    title = stringResource(R.string.show_network_info),
+                    description = stringResource(R.string.show_network_info_desc),
+                    checked = showNetworkInfo,
+                    onCheckedChange = {
+                        showNetworkInfo = it
+                        prefs.showNetworkInfo = it
+                        viewModel.refreshNetworkInfo(force = true)
+                    },
+                )
             }
             add {
                 SettingsToggleRow(

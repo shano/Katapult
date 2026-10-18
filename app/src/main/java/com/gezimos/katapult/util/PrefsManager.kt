@@ -250,6 +250,10 @@ class PrefsManager(context: Context) {
         get() = boolPref(KEY_SHOW_WEATHER, false)
         set(value) = prefs.edit().putBoolean(KEY_SHOW_WEATHER, value).apply()
 
+    var showNetworkInfo: Boolean
+        get() = boolPref(KEY_SHOW_NETWORK_INFO, false)
+        set(value) = prefs.edit().putBoolean(KEY_SHOW_NETWORK_INFO, value).apply()
+
     var roundedIcons: Boolean
         get() = boolPref(KEY_ROUNDED_ICONS, false)
         set(value) = prefs.edit().putBoolean(KEY_ROUNDED_ICONS, value).apply()
@@ -585,6 +589,7 @@ class PrefsManager(context: Context) {
         private const val KEY_SHOW_ALARM = "show_alarm"
         private const val KEY_PENDING_ICON_TARGET = "pending_icon_target"
         private const val KEY_SHOW_WEATHER = "show_weather"
+        private const val KEY_SHOW_NETWORK_INFO = "show_network_info"
         private const val KEY_ROUNDED_ICONS = "rounded_icons"
         private const val KEY_DARK_MODE = "dark_mode"
         private const val KEY_THEME_MODE = "theme_mode"

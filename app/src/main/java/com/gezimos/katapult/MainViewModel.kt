@@ -16,6 +16,8 @@ import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.IntentFilter
 import android.database.ContentObserver
+import android.net.ConnectivityManager
+import android.net.Network
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.SystemClock
@@ -32,6 +34,7 @@ import com.gezimos.katapult.util.WeatherHelper
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +48,7 @@ import com.gezimos.katapult.util.AppLoader
 import com.gezimos.katapult.util.BitmapHelper
 import com.gezimos.katapult.util.DeviceHelper
 import com.gezimos.katapult.util.IconUtility
+import com.gezimos.katapult.util.NetworkInfoHelper
 import com.gezimos.katapult.util.PrefsManager
 import com.gezimos.katapult.util.ShortcutHelper
 import com.gezimos.katapult.util.UsageHelper
@@ -102,6 +106,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
     private val weatherRefreshMs = 10 * 60 * 1000L
     private var weatherCheckedAt = -weatherRefreshMs
+    var networkInfo by mutableStateOf<NetworkInfoHelper.Info?>(null)
+        private set
+    private var networkCheckedAt = -weatherRefreshMs
+    private var networkJob: Job? = null
+    private var networkFetchedOn: Network? = null
+    private var networkWatching = false
     var roundedIcons by mutableStateOf(prefs.roundedIcons)
     var iconSize by mutableStateOf(prefs.iconSize)
     var themeMode by mutableIntStateOf(prefs.themeMode)
@@ -315,6 +325,76 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val result = WeatherHelper.read(ctx)
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                 if (result != null) weather = result
+            }
+        }
+    }
+
+    private var networkCallbackOn = false
+
+    private val networkRefreshRunnable = Runnable { refreshNetworkInfo() }
+
+    // A VPN becomes the default network, so connecting or dropping it lands here too.
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) = scheduleNetworkRefresh()
+        override fun onLost(network: Network) = scheduleNetworkRefresh()
+    }
+
+    // Delayed so DNS is usable on the new network, and spaced out so a flapping
+    // connection can't hammer the lookup service.
+    private fun scheduleNetworkRefresh() {
+        clockHandler.removeCallbacks(networkRefreshRunnable)
+        val wait = maxOf(2_000L, networkCheckedAt + 30_000L - SystemClock.elapsedRealtime())
+        clockHandler.postDelayed(networkRefreshRunnable, wait)
+    }
+
+    fun startNetworkInfo() {
+        networkWatching = true
+        refreshNetworkInfo()
+    }
+
+    fun stopNetworkInfo() {
+        networkWatching = false
+        clockHandler.removeCallbacks(networkRefreshRunnable)
+        syncNetworkCallback()
+    }
+
+    private fun syncNetworkCallback() {
+        val want = prefs.showNetworkInfo && networkWatching
+        if (want == networkCallbackOn) return
+        val cm = ctx.getSystemService(ConnectivityManager::class.java) ?: return
+        try {
+            if (want) {
+                cm.registerDefaultNetworkCallback(networkCallback, clockHandler)
+            } else {
+                cm.unregisterNetworkCallback(networkCallback)
+            }
+            networkCallbackOn = want
+        } catch (_: Exception) {
+        }
+    }
+
+    fun refreshNetworkInfo(force: Boolean = false) {
+        syncNetworkCallback()
+        if (!prefs.showNetworkInfo) {
+            networkJob?.cancel()
+            networkInfo = null
+            networkFetchedOn = null
+            return
+        }
+        val network = ctx.getSystemService(ConnectivityManager::class.java)?.activeNetwork
+        if (!force && network == networkFetchedOn &&
+            (networkJob?.isActive == true ||
+                (networkInfo != null &&
+                    SystemClock.elapsedRealtime() - networkCheckedAt < weatherRefreshMs))
+        ) return
+        networkCheckedAt = SystemClock.elapsedRealtime()
+        networkFetchedOn = network
+        networkJob?.cancel()
+        networkJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val result = network?.let { NetworkInfoHelper.read(ctx, it) }
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                // Cleared on failure: a stale "VPN UP" is worse than no line.
+                networkInfo = result
             }
         }
     }
@@ -875,5 +955,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         stopNotificationListener()
         try { ctx.unregisterReceiver(powerReceiver) } catch (_: Exception) {}
         try { ctx.contentResolver.unregisterContentObserver(weatherObserver) } catch (_: Exception) {}
+        clockHandler.removeCallbacks(networkRefreshRunnable)
+        if (networkCallbackOn) {
+            try {
+                ctx.getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(networkCallback)
+            } catch (_: Exception) {}
+        }
     }
 }

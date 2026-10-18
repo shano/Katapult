@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -55,6 +57,7 @@ fun ColumnScope.ClockDisplay(
     showBattery: Boolean,
     showAlarm: Boolean = true,
     weather: WeatherHelper.Weather? = null,
+    networkInfo: String? = null,
     islandsActive: Boolean,
     onClockClick: (() -> Unit)? = null,
     onClockLongClick: (() -> Unit)? = null,
@@ -201,6 +204,20 @@ fun ColumnScope.ClockDisplay(
                 } else Modifier,
             ),
     )
+
+    if (networkInfo != null) {
+        Text(
+            text = networkInfo,
+            fontSize = 16.sp,
+            fontFamily = LatoFamily,
+            color = LocalInk.current,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .padding(top = 4.dp)
+                .homeIsland(islandsActive, LocalSurface.current, LocalInk.current, hPad = 12.dp),
+        )
+    }
 }
 
 @Composable

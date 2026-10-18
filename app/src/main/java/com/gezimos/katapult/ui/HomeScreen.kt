@@ -102,6 +102,7 @@ import com.gezimos.katapult.util.DeviceHelper
 import com.gezimos.katapult.util.AudioWidgetHelper
 import com.gezimos.katapult.util.BrightnessHelper
 import com.gezimos.katapult.util.IconUtility
+import com.gezimos.katapult.util.NetworkInfoHelper
 import com.gezimos.katapult.util.PrefsManager
 import com.gezimos.katapult.util.WeatherHelper
 
@@ -258,6 +259,9 @@ fun HomeScreen(
                     showBattery = viewModel.prefs.showBattery,
                     showAlarm = viewModel.prefs.showAlarm,
                     weather = viewModel.weather,
+                    networkInfo = viewModel.networkInfo?.let {
+                        NetworkInfoHelper.format(it, stringResource(R.string.vpn_up))
+                    },
                     islandsActive = viewModel.prefs.homeIslands,
                     topSpacing = if (viewModel.prefs.hideStatusBar) 32.dp else 8.dp,
                     onClockClick = {

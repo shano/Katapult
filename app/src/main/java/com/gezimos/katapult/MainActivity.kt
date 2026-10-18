@@ -73,6 +73,7 @@ class MainActivity : ComponentActivity() {
         viewModel.applyStatusBar(this)
         viewModel.checkLockscreenService(this)
         viewModel.refreshWeather()
+        viewModel.startNetworkInfo()
         viewModel.startClock()
         viewModel.loadApps()
         viewModel.refreshNotifications()
@@ -90,6 +91,7 @@ class MainActivity : ComponentActivity() {
         super.onPause()
         viewModel.stopClock()
         viewModel.stopNotificationListener()
+        viewModel.stopNetworkInfo()
     }
 
     override fun onStop() {
