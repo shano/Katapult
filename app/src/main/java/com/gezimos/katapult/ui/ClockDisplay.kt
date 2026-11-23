@@ -210,7 +210,7 @@ fun ColumnScope.ClockDisplay(
         Text(
             text = networkInfo,
             fontSize = 16.sp,
-            fontFamily = LatoFamily,
+            fontFamily = AppFontFamily,
             color = LocalInk.current,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
